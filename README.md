@@ -1,6 +1,8 @@
 # Hive
 
-Telegram bridge for Claude Code agents. Talk to your coding agents via Telegram — send text and voice messages, get progress updates, and manage multiple agents from a single Telegram group.
+Telegram bridge for AI coding agents via MCP. Talk to your agents via Telegram — send text and voice messages, get progress updates, and manage multiple agents from a single Telegram group.
+
+Works with any MCP client: Claude Code, Cursor, Windsurf, Cline, and others.
 
 ## How it works
 
