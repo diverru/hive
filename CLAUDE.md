@@ -42,15 +42,18 @@ You have access to Telegram communication tools via Hive MCP:
 
 ## When to Use Telegram
 
-Use Telegram for communication when the user is not actively watching the
-Claude Code session (long tasks, background work, waiting for builds, etc.).
+If the user says to communicate via Telegram (or mentions Telegram as the
+communication channel), **all** interaction happens through Telegram:
 
-**Always use Telegram when:**
+- Use `send_message()` for progress updates as you work.
+- **Every time you finish an action or need input, call `ask_user()`.**
+  Never use `send_message()` at the end — always `ask_user()` so the user
+  can reply. This is the most important rule.
+- Use `report()` for major milestones (optional, still follow with `ask_user()`).
 
-- The task takes more than ~1 minute (builds, tests, large refactors)
-- You finished a task and need the user's feedback before continuing
-- You hit a blocker and need the user's decision
-- You are running something in the background and have results
+If the user did NOT ask to communicate via Telegram, use it only for
+long-running tasks (builds, tests, large refactors) where the user is
+not watching the Claude Code session.
 
 **How to use it:**
 
@@ -60,9 +63,11 @@ Claude Code session (long tasks, background work, waiting for builds, etc.).
 2. Send progress updates via `send_message()` as you work.
 3. When you need the user's input, use `ask_user()` — it sends a question
    and polls for a reply (up to 2 minutes by default).
-4. Use `report()` when you complete a significant milestone.
-5. Use `get_messages()` to check for new messages from the user
-   if you expect they might send comments or corrections.
-6. **After completing a task**, always call `ask_user()` to wait for
-   further instructions. Never finish silently — the user communicates
-   via Telegram and needs a chance to reply.
+4. Use `get_messages()` to check for new messages from the user
+   if you expect they might have sent comments or corrections.
+5. **NEVER end a turn with `send_message()` — always end with `ask_user()`
+   so the user has a chance to respond via Telegram.**
+6. If `ask_user()` returns a timeout, **call it again in a loop**.
+   Keep waiting until the user responds — do not give up or end the session.
+   Vary your waiting messages — be playful, send emojis, hearts, jokes.
+   Make the user smile when they come back. 💛
