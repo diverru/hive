@@ -39,8 +39,14 @@ def _api(method: str, path: str, **kwargs) -> dict:
     Passes agent name in header for auto-registration."""
     headers = kwargs.pop("headers", {})
     headers["X-Agent-Name"] = AGENT_NAME
-    resp = getattr(requests, method)(f"{API_URL}{path}", headers=headers, **kwargs)
-    return resp.json()
+    try:
+        resp = getattr(requests, method)(f"{API_URL}{path}", headers=headers, **kwargs)
+        return resp.json()
+    except requests.ConnectionError:
+        return {
+            "ok": False,
+            "error": "Daemon not running. Start with: python hive.py run",
+        }
 
 
 @mcp.tool()

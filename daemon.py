@@ -97,8 +97,13 @@ class HiveDaemon:
         # Voice message
         voice = msg.get("voice")
         if voice:
-            text = await self._transcribe_voice_message(voice["file_id"])
-            logger.info("Voice from topic {}: {}", topic_id, text)
+            try:
+                text = await self._transcribe_voice_message(voice["file_id"])
+            except Exception:
+                logger.exception("Voice transcription failed for topic {}", topic_id)
+                text = "[voice transcription failed]"
+            else:
+                logger.info("Voice from topic {}: {}", topic_id, text)
         else:
             text = msg.get("text")
 
@@ -212,7 +217,7 @@ class HiveDaemon:
         agent_id = request.match_info["agent_id"]
         limit = int(request.query.get("limit", 20))
         since_id = request.query.get("since_id")
-        since_id = int(since_id) if since_id else None
+        since_id = int(since_id) if since_id is not None else None
 
         messages = self.storage.get_messages(
             agent_id,
