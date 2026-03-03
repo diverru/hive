@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import onnx_asr
 from aiohttp import web
 from loguru import logger
 
@@ -40,8 +41,6 @@ def _ogg_to_wav(ogg_path: Path) -> Path:
 def transcribe_voice(audio_path: Path) -> str:
     """Transcribe a voice message using Parakeet TDT v3 via onnx-asr."""
     global _asr_model
-    import onnx_asr
-
     if _asr_model is None:
         logger.info("Loading Parakeet TDT v3 model (first time)...")
         _asr_model = onnx_asr.load_model("nemo-parakeet-tdt-0.6b-v3")
@@ -150,7 +149,7 @@ class HiveDaemon:
                 resp.text,
             )
         else:
-            logger.debug(
+            logger.info(
                 "{} {} -> {}",
                 request.method,
                 request.path,

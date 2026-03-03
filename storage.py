@@ -78,7 +78,7 @@ class Storage:
     def get_messages(
         self, agent_id: str, limit: int = 20, since_id: int = None
     ) -> list[dict]:
-        if since_id:
+        if since_id is not None:
             rows = self.conn.execute(
                 "SELECT * FROM messages WHERE agent_id = ? AND direction = 'in' AND id > ? "
                 "ORDER BY id DESC LIMIT ?",

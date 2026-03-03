@@ -19,7 +19,7 @@ class TelegramBot:
         self, chat_id: int, text: str, message_thread_id: int = None
     ) -> dict:
         """Send a message. message_thread_id targets a specific forum topic."""
-        payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        payload = {"chat_id": chat_id, "text": text}
         if message_thread_id:
             payload["message_thread_id"] = message_thread_id
         return requests.post(

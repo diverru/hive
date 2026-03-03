@@ -63,3 +63,6 @@ Claude Code session (long tasks, background work, waiting for builds, etc.).
 4. Use `report()` when you complete a significant milestone.
 5. Use `get_messages()` to check for new messages from the user
    if you expect they might send comments or corrections.
+6. **After completing a task**, always call `ask_user()` to wait for
+   further instructions. Never finish silently — the user communicates
+   via Telegram and needs a chance to reply.
