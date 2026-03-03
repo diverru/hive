@@ -92,6 +92,20 @@ class Storage:
             ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
+    def get_cursor(self, agent_id: str) -> int:
+        row = self.conn.execute(
+            "SELECT value FROM state WHERE key = ?",
+            (f"cursor:{agent_id}",),
+        ).fetchone()
+        return int(row["value"]) if row else 0
+
+    def set_cursor(self, agent_id: str, message_id: int):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)",
+            (f"cursor:{agent_id}", str(message_id)),
+        )
+        self.conn.commit()
+
     def get_update_offset(self) -> int | None:
         row = self.conn.execute(
             "SELECT value FROM state WHERE key = 'update_offset'"

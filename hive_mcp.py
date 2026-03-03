@@ -49,6 +49,15 @@ def _api(method: str, path: str, **kwargs) -> dict:
         }
 
 
+def _get_cursor() -> int:
+    resp = _api("get", f"/agents/{AGENT_ID}/cursor")
+    return resp.get("cursor", 0)
+
+
+def _set_cursor(message_id: int):
+    _api("put", f"/agents/{AGENT_ID}/cursor", json={"cursor": message_id})
+
+
 @mcp.tool()
 def send_message(text: str, topic_name: str = "") -> str:
     """Send a message to the user via Telegram. Use this to report progress,
@@ -69,16 +78,32 @@ def get_messages(limit: int = 10) -> list[dict]:
     the user sent in your Telegram topic. Use this to check if the user
     has replied to your questions."""
     resp = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": limit})
-    return resp.get("messages", [])
+    msgs = resp.get("messages", [])
+    if msgs:
+        _set_cursor(msgs[-1]["id"])
+    return msgs
 
 
 @mcp.tool()
 def ask_user(question: str, wait_seconds: int = 120) -> str:
     """Ask the user a question via Telegram and wait for their response.
     Sends the question, then polls for a reply (up to wait_seconds).
-    Returns the user's answer or 'No response' if timeout."""
-    before = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": 1})
-    last_id = before["messages"][0]["id"] if before.get("messages") else 0
+    Returns the user's answer or 'No response' if timeout.
+
+    Returns ALL messages since last read, marked as before_question or
+    after_question so you know which ones are replies to your question."""
+    cursor = _get_cursor()
+
+    # Grab messages that arrived before the question (since last read)
+    before = _api(
+        "get",
+        f"/agents/{AGENT_ID}/messages",
+        params={"limit": 50, "since_id": cursor},
+    )
+    before_msgs = before.get("messages", [])
+
+    # Record the latest id before sending question
+    pre_question_id = before_msgs[-1]["id"] if before_msgs else cursor
 
     _api(
         "post",
@@ -86,16 +111,41 @@ def ask_user(question: str, wait_seconds: int = 120) -> str:
         json={"text": f"Question: {question}"},
     )
 
+    # Poll for new messages after the question
     deadline = time.time() + wait_seconds
     while time.time() < deadline:
         time.sleep(3)
         after = _api(
             "get",
             f"/agents/{AGENT_ID}/messages",
-            params={"limit": 1, "since_id": last_id},
+            params={"limit": 50, "since_id": pre_question_id},
         )
         if after.get("messages"):
-            return after["messages"][0]["text"]
+            after_msgs = after.get("messages", [])
+            new_cursor = after_msgs[-1]["id"]
+            if before_msgs:
+                new_cursor = max(new_cursor, before_msgs[-1]["id"])
+            _set_cursor(new_cursor)
+
+            parts = []
+            if before_msgs:
+                parts.append("[before_question]")
+                for m in before_msgs:
+                    parts.append(m["text"])
+            parts.append("[after_question]")
+            for m in after_msgs:
+                parts.append(m["text"])
+            return "\n".join(parts)
+
+    # Timeout — still return before messages if any
+    if before_msgs:
+        _set_cursor(before_msgs[-1]["id"])
+        parts = ["[before_question]"]
+        for m in before_msgs:
+            parts.append(m["text"])
+        parts.append("[after_question]")
+        parts.append("(no response — timeout)")
+        return "\n".join(parts)
 
     return "No response (timeout)"
 

@@ -181,6 +181,14 @@ class HiveDaemon:
             "/agents/{agent_id}/topic",
             self._handle_rename_topic,
         )
+        app.router.add_get(
+            "/agents/{agent_id}/cursor",
+            self._handle_get_cursor,
+        )
+        app.router.add_put(
+            "/agents/{agent_id}/cursor",
+            self._handle_set_cursor,
+        )
         return app
 
     async def _handle_health(self, request: web.Request) -> web.Response:
@@ -254,6 +262,23 @@ class HiveDaemon:
             )
 
         logger.info("Renamed topic for '{}' to '{}'", agent_id, name)
+        return web.json_response({"ok": True})
+
+    async def _handle_get_cursor(
+        self,
+        request: web.Request,
+    ) -> web.Response:
+        agent_id = request.match_info["agent_id"]
+        cursor = self.storage.get_cursor(agent_id)
+        return web.json_response({"cursor": cursor})
+
+    async def _handle_set_cursor(
+        self,
+        request: web.Request,
+    ) -> web.Response:
+        agent_id = request.match_info["agent_id"]
+        data = await request.json()
+        self.storage.set_cursor(agent_id, data["cursor"])
         return web.json_response({"ok": True})
 
 
