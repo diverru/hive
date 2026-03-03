@@ -84,17 +84,12 @@ def get_messages(limit: int = 10) -> list[dict]:
     return msgs
 
 
-@mcp.tool()
-def ask_user(question: str, wait_seconds: int = 120) -> str:
-    """Ask the user a question via Telegram and wait for their response.
-    Sends the question, then polls for a reply (up to wait_seconds).
-    Returns the user's answer or 'No response' if timeout.
-
-    Returns ALL messages since last read, marked as before_question or
-    after_question so you know which ones are replies to your question."""
+def _poll_for_messages(wait_seconds: int) -> str:
+    """Fetch unread messages and wait for new ones.
+    Returns all messages with [before_wait]/[after_wait] markers."""
     cursor = _get_cursor()
 
-    # Grab messages that arrived before the question (since last read)
+    # Grab messages that arrived since last read
     before = _api(
         "get",
         f"/agents/{AGENT_ID}/messages",
@@ -102,23 +97,16 @@ def ask_user(question: str, wait_seconds: int = 120) -> str:
     )
     before_msgs = before.get("messages", [])
 
-    # Record the latest id before sending question
-    pre_question_id = before_msgs[-1]["id"] if before_msgs else cursor
+    pre_wait_id = before_msgs[-1]["id"] if before_msgs else cursor
 
-    _api(
-        "post",
-        f"/agents/{AGENT_ID}/messages",
-        json={"text": f"Question: {question}"},
-    )
-
-    # Poll for new messages after the question
+    # Poll for new messages
     deadline = time.time() + wait_seconds
     while time.time() < deadline:
         time.sleep(3)
         after = _api(
             "get",
             f"/agents/{AGENT_ID}/messages",
-            params={"limit": 50, "since_id": pre_question_id},
+            params={"limit": 50, "since_id": pre_wait_id},
         )
         if after.get("messages"):
             after_msgs = after.get("messages", [])
@@ -148,6 +136,33 @@ def ask_user(question: str, wait_seconds: int = 120) -> str:
         return "\n".join(parts)
 
     return "No response (timeout)"
+
+
+@mcp.tool()
+def ask_user(question: str, wait_seconds: int = 120) -> str:
+    """Ask the user a question via Telegram and wait for their response.
+    Sends the question, then polls for a reply (up to wait_seconds).
+    Returns the user's answer or 'No response' if timeout.
+
+    Returns ALL messages since last read, marked as before_question or
+    after_question so you know which ones are replies to your question.
+
+    On timeout, use wait_for_reply() to keep waiting without re-sending
+    the question."""
+    _api(
+        "post",
+        f"/agents/{AGENT_ID}/messages",
+        json={"text": f"Question: {question}"},
+    )
+    return _poll_for_messages(wait_seconds)
+
+
+@mcp.tool()
+def wait_for_reply(wait_seconds: int = 300) -> str:
+    """Wait for user reply without sending a new message.
+    Use this after ask_user() timed out to keep waiting.
+    Optionally send a reminder via send_message() before calling this."""
+    return _poll_for_messages(wait_seconds)
 
 
 @mcp.tool()

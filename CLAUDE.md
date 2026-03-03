@@ -38,6 +38,7 @@ You have access to Telegram communication tools via Hive MCP:
 - `send_message(text)` — send a message to the user
 - `get_messages(limit)` — get recent messages from the user
 - `ask_user(question)` — ask a question and wait for the user's reply
+- `wait_for_reply(wait_seconds)` — keep waiting without re-sending the question
 - `report(summary, details)` — send a structured progress report
 
 ## When to Use Telegram
@@ -46,6 +47,8 @@ If the user says to communicate via Telegram (or mentions Telegram as the
 communication channel), **all** interaction happens through Telegram:
 
 - Use `send_message()` for progress updates as you work.
+- Before calling `ask_user()`, check `get_messages()` first — the user may
+  have sent updates or new tasks while you were working.
 - **Every time you finish an action or need input, call `ask_user()`.**
   Never use `send_message()` at the end — always `ask_user()` so the user
   can reply. This is the most important rule.
@@ -68,7 +71,8 @@ not watching the Claude Code session.
    if you expect they might have sent comments or corrections.
 5. **NEVER end a turn with `send_message()` — always end with `ask_user()`
    so the user has a chance to respond via Telegram.**
-6. If `ask_user()` returns a timeout, **call it again in a loop**.
-   Keep waiting until the user responds — do not give up or end the session.
-   Vary your waiting messages — be playful, send emojis, hearts, jokes.
-   Make the user smile when they come back. 💛
+6. If `ask_user()` returns a timeout, use `wait_for_reply()` to keep waiting.
+   Do NOT call `ask_user()` again — that would re-send the question.
+   Keep calling `wait_for_reply()` in a loop until the user responds.
+   Every few iterations, optionally send a playful reminder via `send_message()`
+   (emojis, hearts, jokes). Make the user smile when they come back. 💛

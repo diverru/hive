@@ -56,10 +56,17 @@ def transcribe_voice(audio_path: Path) -> str:
 
 
 class HiveDaemon:
-    def __init__(self, bot: TelegramBot, storage: Storage, chat_id: int):
+    def __init__(
+        self,
+        bot: TelegramBot,
+        storage: Storage,
+        chat_id: int,
+        owner_id: int | None = None,
+    ):
         self.bot = bot
         self.storage = storage
         self.chat_id = chat_id
+        self.owner_id = owner_id
 
     # --- Telegram polling ---
 
@@ -85,6 +92,16 @@ class HiveDaemon:
         msg = update.get("message")
         if not msg:
             return
+
+        # Security: only accept messages from the configured chat
+        if msg.get("chat", {}).get("id") != self.chat_id:
+            return
+
+        # Security: only accept messages from the owner
+        if self.owner_id is not None:
+            from_id = msg.get("from", {}).get("id")
+            if from_id != self.owner_id:
+                return
 
         topic_id = msg.get("message_thread_id")
         if not topic_id:
@@ -282,10 +299,16 @@ class HiveDaemon:
         return web.json_response({"ok": True})
 
 
-async def run(token: str, chat_id: int, host: str = "127.0.0.1", port: int = 7433):
+async def run(
+    token: str,
+    chat_id: int,
+    owner_id: int | None = None,
+    host: str = "127.0.0.1",
+    port: int = 7433,
+):
     bot = TelegramBot(token)
     storage = Storage()
-    daemon = HiveDaemon(bot, storage, chat_id)
+    daemon = HiveDaemon(bot, storage, chat_id, owner_id)
 
     app = daemon.create_app()
     runner = web.AppRunner(app)

@@ -59,6 +59,19 @@ def cmd_init():
         chat_id = input("Enter the group chat_id manually: ").strip()
 
     chat_id = int(chat_id)
+
+    # Detect owner user_id from the setup message
+    owner_id = None
+    for u in updates.get("result", []):
+        msg = u.get("message", {})
+        sender = msg.get("from", {})
+        if sender.get("id"):
+            owner_id = sender["id"]
+            break
+    if owner_id:
+        print(f"Owner: {owner_id}")
+    else:
+        print("Warning: could not detect owner_id")
     result = bot.send_message(chat_id, "Hive connected. Bot is ready.")
     if not result.get("ok"):
         # Group upgraded to supergroup — use the new chat_id
@@ -70,7 +83,10 @@ def cmd_init():
         if not result.get("ok"):
             print(f"Warning: test message failed: {result}")
 
-    ENV_PATH.write_text(f"TELEGRAM_BOT_TOKEN={token}\nTELEGRAM_CHAT_ID={chat_id}\n")
+    env_lines = f"TELEGRAM_BOT_TOKEN={token}\nTELEGRAM_CHAT_ID={chat_id}\n"
+    if owner_id:
+        env_lines += f"TELEGRAM_OWNER_ID={owner_id}\n"
+    ENV_PATH.write_text(env_lines)
     print(f"\nConfig saved to {ENV_PATH}")
 
     print("\nDownloading ASR model for voice transcription...")
@@ -89,8 +105,11 @@ def cmd_run():
         print("Error: run 'python hive.py init' first")
         sys.exit(1)
 
-    logger.info("Starting Hive daemon (chat_id={})", chat_id)
-    asyncio.run(run_daemon(token, int(chat_id)))
+    owner_id = os.environ.get("TELEGRAM_OWNER_ID")
+    owner_id = int(owner_id) if owner_id else None
+
+    logger.info("Starting Hive daemon (chat_id={}, owner_id={})", chat_id, owner_id)
+    asyncio.run(run_daemon(token, int(chat_id), owner_id=owner_id))
 
 
 def cmd_status():
