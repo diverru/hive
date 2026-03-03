@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hive": {
+      "command": "python",
+      "args": ["hive_mcp.py"],
+      "env": {
+        "HIVE_AGENT_NAME": "Claude Agent",
+        "HIVE_API_URL": "http://127.0.0.1:7433",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
