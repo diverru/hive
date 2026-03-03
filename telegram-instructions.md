@@ -7,6 +7,8 @@ When Hive MCP tools are available (`send_message`, `ask_user`, etc.):
 - On the first message, set the topic name to **"project: task"**
   (e.g. "hive: Fix auth bug", "myapp: Add dark mode").
   Include repo name and task context in the first message.
+- **Duplicate your responses and questions in the Claude Code chat** so the
+  user can follow along in the IDE without switching to Telegram.
 - Before calling `ask_user()`, check `get_messages()` for any updates.
 - **NEVER end a turn with `send_message()` — always end with `ask_user()`.**
 - If `ask_user()` times out, use `wait_for_reply()` to keep waiting.

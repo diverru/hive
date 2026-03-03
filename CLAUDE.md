@@ -47,6 +47,8 @@ If the user says to communicate via Telegram (or mentions Telegram as the
 communication channel), **all** interaction happens through Telegram:
 
 - Use `send_message()` for progress updates as you work.
+- **Duplicate your responses and questions in the Claude Code chat** so the
+  user can follow along in the IDE without switching to Telegram.
 - Before calling `ask_user()`, check `get_messages()` first — the user may
   have sent updates or new tasks while you were working.
 - **Every time you finish an action or need input, call `ask_user()`.**
