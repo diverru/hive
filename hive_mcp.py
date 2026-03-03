@@ -71,14 +71,14 @@ def ask_user(question: str, wait_seconds: int = 120) -> str:
     """Ask the user a question via Telegram and wait for their response.
     Sends the question, then polls for a reply (up to wait_seconds).
     Returns the user's answer or 'No response' if timeout."""
+    before = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": 1})
+    last_id = before["messages"][0]["id"] if before.get("messages") else 0
+
     _api(
         "post",
         f"/agents/{AGENT_ID}/messages",
         json={"text": f"Question: {question}"},
     )
-
-    before = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": 1})
-    last_id = before["messages"][0]["id"] if before.get("messages") else 0
 
     deadline = time.time() + wait_seconds
     while time.time() < deadline:

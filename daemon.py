@@ -3,6 +3,7 @@
 
 import asyncio
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from loguru import logger
 
 from storage import Storage
 from telegram_api import TelegramBot
+
+logger.remove()
+logger.add(sys.stderr, level="INFO")
 
 
 _asr_model = None
@@ -149,7 +153,7 @@ class HiveDaemon:
                 resp.text,
             )
         else:
-            logger.info(
+            logger.debug(
                 "{} {} -> {}",
                 request.method,
                 request.path,
