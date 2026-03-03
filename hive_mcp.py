@@ -149,6 +149,21 @@ def ask_user(question: str, wait_seconds: int = 120) -> str:
 
     On timeout, use wait_for_reply() to keep waiting without re-sending
     the question."""
+    # Check for unread messages before sending the question
+    cursor = _get_cursor()
+    pending = _api(
+        "get",
+        f"/agents/{AGENT_ID}/messages",
+        params={"limit": 50, "since_id": cursor},
+    )
+    pending_msgs = pending.get("messages", [])
+    if pending_msgs:
+        _set_cursor(pending_msgs[-1]["id"])
+        parts = ["[pending_messages — handle these before asking your question]"]
+        for m in pending_msgs:
+            parts.append(m["text"])
+        return "\n".join(parts)
+
     _api(
         "post",
         f"/agents/{AGENT_ID}/messages",
