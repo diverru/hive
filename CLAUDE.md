@@ -57,9 +57,10 @@ not watching the Claude Code session.
 
 **How to use it:**
 
-1. On the first message, call `set_topic_name()` or pass `topic_name` to
-   `send_message()` to give the topic a short, meaningful name
-   (e.g. "Fix auth bug", "Add dark mode").
+1. On the first message, call `set_topic_name()` with the **project name
+   and task** (e.g. "hive: Fix auth bug", "myapp: Add dark mode").
+   Also include the repo and task context in the first `send_message()`
+   so the user knows which project and what you're working on.
 2. Send progress updates via `send_message()` as you work.
 3. When you need the user's input, use `ask_user()` — it sends a question
    and polls for a reply (up to 2 minutes by default).
