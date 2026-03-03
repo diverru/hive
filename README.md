@@ -2,7 +2,7 @@
 
 Telegram bridge for AI coding agents via MCP. Talk to your agents via Telegram — send text and voice messages, get progress updates, and manage multiple agents from a single Telegram group.
 
-Works with any MCP client: Claude Code, Cursor, Windsurf, Cline, and others.
+Should work with any MCP client: Claude Code, Cursor, Windsurf, Cline, and others. Tested with Claude Code.
 
 ## How it works
 
