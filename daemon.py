@@ -106,24 +106,39 @@ class HiveDaemon:
     async def _handle_update(self, update: dict):
         msg = update.get("message")
         if not msg:
+            logger.debug("Update without message: {}", update.get("update_id"))
             return
 
+        chat_id = msg.get("chat", {}).get("id")
+        from_id = msg.get("from", {}).get("id")
+        topic_id = msg.get("message_thread_id")
+        text_preview = (msg.get("text") or "")[:50]
+
         # Security: only accept messages from the configured chat
-        if msg.get("chat", {}).get("id") != self.chat_id:
+        if chat_id != self.chat_id:
+            logger.debug(
+                "Ignored message from chat {} (expected {})", chat_id, self.chat_id
+            )
             return
 
         # Security: only accept messages from the owner
-        if self.owner_id is not None:
-            from_id = msg.get("from", {}).get("id")
-            if from_id != self.owner_id:
-                return
+        if self.owner_id is not None and from_id != self.owner_id:
+            logger.debug(
+                "Ignored message from user {} (expected {})", from_id, self.owner_id
+            )
+            return
 
-        topic_id = msg.get("message_thread_id")
         if not topic_id:
+            logger.debug("Ignored message without topic: '{}'", text_preview)
             return
 
         agent = self.storage.get_agent_by_topic(topic_id)
         if not agent:
+            logger.warning(
+                "No agent for topic {} — message dropped: '{}'",
+                topic_id,
+                text_preview,
+            )
             return
 
         # Voice message
@@ -145,6 +160,12 @@ class HiveDaemon:
                 "in",
                 text,
                 telegram_message_id=msg.get("message_id"),
+            )
+            logger.info(
+                "Saved message from topic {} (agent '{}'): '{}'",
+                topic_id,
+                agent["id"],
+                text[:80],
             )
 
     async def _transcribe_voice_message(self, file_id: str) -> str:
@@ -241,12 +262,18 @@ class HiveDaemon:
                 status=500,
             )
 
-        await asyncio.to_thread(
+        result = await asyncio.to_thread(
             self.bot.send_message,
             self.chat_id,
             text,
             agent["topic_id"],
         )
+        if not result.get("ok"):
+            logger.error("Telegram send failed for '{}': {}", agent_id, result)
+            return web.json_response(
+                {"ok": False, "error": result},
+                status=502,
+            )
         self.storage.save_message(agent_id, "out", text)
         return web.json_response({"ok": True})
 
