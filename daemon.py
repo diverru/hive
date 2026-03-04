@@ -2,6 +2,7 @@
 """Hive daemon — Telegram polling + HTTP API."""
 
 import asyncio
+import signal
 import subprocess
 import sys
 import tempfile
@@ -74,19 +75,25 @@ class HiveDaemon:
         """Long-poll Telegram for new messages, store incoming ones."""
         offset = self.storage.get_update_offset()
         logger.info("Starting Telegram polling (offset={})", offset)
+        self._running = True
 
-        while True:
+        while self._running:
             try:
                 resp = await asyncio.to_thread(
-                    self.bot.get_updates, offset=offset, timeout=30
+                    self.bot.get_updates, offset=offset, timeout=5
                 )
                 for update in resp.get("result", []):
                     offset = update["update_id"] + 1
                     self.storage.set_update_offset(offset)
                     await self._handle_update(update)
             except Exception:
+                if not self._running:
+                    break
                 logger.exception("Polling error, retrying in 5s")
                 await asyncio.sleep(5)
+
+    def stop(self):
+        self._running = False
 
     async def _handle_update(self, update: dict):
         msg = update.get("message")
@@ -295,7 +302,26 @@ class HiveDaemon:
     ) -> web.Response:
         agent_id = request.match_info["agent_id"]
         data = await request.json()
-        self.storage.set_cursor(agent_id, data["cursor"])
+        old_cursor = self.storage.get_cursor(agent_id)
+        new_cursor = data["cursor"]
+        self.storage.set_cursor(agent_id, new_cursor)
+
+        # React with 👀 to messages the agent just "read"
+        msgs = self.storage.get_messages(agent_id, limit=50, since_id=old_cursor)
+        read_msgs = [m for m in msgs if m["id"] <= new_cursor]
+        for m in read_msgs:
+            if m.get("telegram_message_id"):
+                try:
+                    await asyncio.to_thread(
+                        self.bot.set_message_reaction,
+                        self.chat_id,
+                        m["telegram_message_id"],
+                    )
+                except Exception:
+                    logger.debug(
+                        "Failed to react to message {}", m["telegram_message_id"]
+                    )
+
         return web.json_response({"ok": True})
 
 
@@ -317,4 +343,12 @@ async def run(
     await site.start()
     logger.info("HTTP API listening on {}:{}", host, port)
 
-    await daemon.poll_telegram()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, daemon.stop)
+
+    try:
+        await daemon.poll_telegram()
+    finally:
+        await runner.cleanup()
+        logger.info("Daemon stopped")

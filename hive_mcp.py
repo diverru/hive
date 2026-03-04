@@ -65,11 +65,31 @@ def send_message(text: str, topic_name: str = "") -> str:
     Telegram topic.
 
     Set topic_name on the first message to give the topic a meaningful name
-    describing your current task (e.g. 'Fix auth bug', 'Add dark mode')."""
+    describing your current task (e.g. 'Fix auth bug', 'Add dark mode').
+
+    Also returns any unread messages from the user so you can react to them."""
     resp = _api("post", f"/agents/{AGENT_ID}/messages", json={"text": text})
-    if topic_name and resp.get("ok"):
+    if not resp.get("ok"):
+        return f"Error: {resp}"
+    if topic_name:
         _api("put", f"/agents/{AGENT_ID}/topic", json={"name": topic_name})
-    return "Message sent" if resp.get("ok") else f"Error: {resp}"
+
+    # Check for unread messages from the user
+    cursor = _get_cursor()
+    pending = _api(
+        "get",
+        f"/agents/{AGENT_ID}/messages",
+        params={"limit": 50, "since_id": cursor},
+    )
+    pending_msgs = pending.get("messages", [])
+    if pending_msgs:
+        _set_cursor(pending_msgs[-1]["id"])
+        parts = ["Message sent", "", "[unread_messages]"]
+        for m in pending_msgs:
+            parts.append(m["text"])
+        return "\n".join(parts)
+
+    return "Message sent"
 
 
 @mcp.tool()

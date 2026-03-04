@@ -45,6 +45,19 @@ class TelegramBot:
             },
         ).json()
 
+    def set_message_reaction(
+        self, chat_id: int, message_id: int, emoji: str = "👀"
+    ) -> dict:
+        """Set a reaction on a message."""
+        return requests.post(
+            f"{self.base_url}/setMessageReaction",
+            json={
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "reaction": [{"type": "emoji", "emoji": emoji}],
+            },
+        ).json()
+
     def get_updates(self, offset: int = None, timeout: int = 30) -> dict:
         """Long poll for new updates.
         timeout — how long Telegram holds the connection (seconds).
