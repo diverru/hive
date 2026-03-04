@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 import onnx_asr
+import requests.exceptions
 from aiohttp import web
 from loguru import logger
 
@@ -86,6 +87,13 @@ class HiveDaemon:
                     offset = update["update_id"] + 1
                     self.storage.set_update_offset(offset)
                     await self._handle_update(update)
+            except (
+                requests.exceptions.ReadTimeout,
+                requests.exceptions.ConnectionError,
+            ):
+                if not self._running:
+                    break
+                logger.warning("Telegram poll timeout, retrying...")
             except Exception:
                 if not self._running:
                     break
