@@ -99,11 +99,11 @@ def send_message(text: str, topic_name: str = "") -> str:
 
 
 @mcp.tool()
-def get_messages(limit: int = 50) -> dict:
+def get_messages() -> dict:
     """Get recent messages from the user via Telegram. Returns messages
     the user sent in your Telegram topic. Use this to check if the user
     has replied to your questions."""
-    resp = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": limit})
+    resp = _api("get", f"/agents/{AGENT_ID}/messages", params={"limit": 50})
     msgs = resp.get("messages", [])
     if msgs:
         _set_cursor(msgs[-1]["id"])
