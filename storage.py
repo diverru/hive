@@ -47,6 +47,10 @@ class Storage:
         )
         self.conn.commit()
 
+    def update_agent_name(self, agent_id: str, name: str):
+        self.conn.execute("UPDATE agents SET name = ? WHERE id = ?", (name, agent_id))
+        self.conn.commit()
+
     def get_agent(self, agent_id: str) -> dict | None:
         row = self.conn.execute(
             "SELECT * FROM agents WHERE id = ?", (agent_id,)

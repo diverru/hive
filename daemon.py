@@ -147,10 +147,13 @@ class HiveDaemon:
             try:
                 text = await self._transcribe_voice_message(voice["file_id"])
             except Exception:
-                logger.exception("Voice transcription failed for topic {}", topic_id)
+                logger.exception(
+                    "[{}] Voice transcription failed",
+                    agent.get("name") or agent["id"],
+                )
                 text = "[voice transcription failed]"
             else:
-                logger.info("Voice from topic {}: {}", topic_id, text)
+                logger.info("[{}] (voice) {}", agent.get("name") or agent["id"], text)
         else:
             text = msg.get("text")
 
@@ -161,12 +164,7 @@ class HiveDaemon:
                 text,
                 telegram_message_id=msg.get("message_id"),
             )
-            logger.info(
-                "Saved message from topic {} (agent '{}'): '{}'",
-                topic_id,
-                agent["id"],
-                text[:80],
-            )
+            logger.info("[{}] {}", agent.get("name") or agent["id"], text)
 
     async def _transcribe_voice_message(self, file_id: str) -> str:
         with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as f:
@@ -320,6 +318,7 @@ class HiveDaemon:
                 status=500,
             )
 
+        self.storage.update_agent_name(agent_id, name)
         logger.info("Renamed topic for '{}' to '{}'", agent_id, name)
         return web.json_response({"ok": True})
 
