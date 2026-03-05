@@ -201,6 +201,47 @@ def wait_for_reply(wait_seconds: int = 300) -> str:
 
 
 @mcp.tool()
+def wait_for_messages(wait_seconds: int = 300) -> str:
+    """Wait for new messages from the user. Use this as a background
+    listener so the agent stays reachable via Telegram at all times.
+
+    Run this in a background agent in a loop:
+    1. Call wait_for_messages() — blocks until a message arrives or timeout
+    2. If messages arrive, return them to the main agent
+    3. Main agent handles the messages and restarts the listener
+
+    Returns the user's messages or 'No messages (timeout)' on timeout."""
+    cursor = _get_cursor()
+
+    # Check for already-pending messages
+    pending = _api(
+        "get",
+        f"/agents/{AGENT_ID}/messages",
+        params={"limit": 50, "since_id": cursor},
+    )
+    pending_msgs = pending.get("messages", [])
+    if pending_msgs:
+        _set_cursor(pending_msgs[-1]["id"])
+        return "\n".join(m["text"] for m in pending_msgs)
+
+    # Poll for new messages
+    deadline = time.time() + wait_seconds
+    while time.time() < deadline:
+        time.sleep(3)
+        resp = _api(
+            "get",
+            f"/agents/{AGENT_ID}/messages",
+            params={"limit": 50, "since_id": cursor},
+        )
+        msgs = resp.get("messages", [])
+        if msgs:
+            _set_cursor(msgs[-1]["id"])
+            return "\n".join(m["text"] for m in msgs)
+
+    return "No messages (timeout)"
+
+
+@mcp.tool()
 def set_topic_name(name: str) -> str:
     """Set the Telegram topic name for this agent. Call this early
     in the conversation to give the topic a meaningful name that

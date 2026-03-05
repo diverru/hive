@@ -24,4 +24,12 @@ When Hive MCP tools are available (`send_message`, `ask_user`, etc.):
 - `get_messages(limit)` — get recent messages from the user
 - `ask_user(question)` — ask a question and wait for the user's reply
 - `wait_for_reply(wait_seconds)` — keep waiting without re-sending the question
+- `wait_for_messages(wait_seconds)` — background listener for incoming messages
 - `report(summary, details)` — send a structured progress report
+
+### Background Listener
+
+Always run a background agent that calls `wait_for_messages()` in a loop.
+This keeps the agent reachable via Telegram at all times. When messages
+arrive, handle them and restart the listener. Never let the agent be
+unreachable.

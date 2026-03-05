@@ -39,6 +39,7 @@ You have access to Telegram communication tools via Hive MCP:
 - `get_messages(limit)` — get recent messages from the user
 - `ask_user(question)` — ask a question and wait for the user's reply
 - `wait_for_reply(wait_seconds)` — keep waiting without re-sending the question
+- `wait_for_messages(wait_seconds)` — background listener for incoming messages
 - `report(summary, details)` — send a structured progress report
 
 ## When to Use Telegram
@@ -78,3 +79,24 @@ not watching the Claude Code session.
    Keep calling `wait_for_reply()` in a loop until the user responds.
    Every few iterations, optionally send a playful reminder via `send_message()`
    (emojis, hearts, jokes). Make the user smile when they come back. 💛
+
+## Background Listener (Always Reachable)
+
+When communicating via Telegram, **always run a background listener** so the
+user can reach you at any time — even while you're working on a task.
+
+**How it works:**
+
+1. At the start of the session (after `set_topic_name`), launch a background
+   agent that calls `wait_for_messages()` in a loop.
+2. When the background agent returns with messages, handle them immediately.
+3. After handling, restart the background listener.
+4. If you need to ask a question (`ask_user`), you can do so independently —
+   the background listener and `ask_user` don't conflict.
+5. If the user interrupts you (sends a message while you're working),
+   the background listener catches it. Always restart the listener after
+   handling the interruption.
+
+**The agent should NEVER be unreachable.** If the background listener timed
+out, restart it immediately. The user should always be able to send a
+Telegram message and get a response.
